@@ -1,5 +1,5 @@
-import doodad as dd
-import gcsl.doodad_utils as dd_utils
+# import doodad as dd
+# import gcsl.doodad_utils as dd_utils
 
 def run(output_dir='/tmp', env_name='pointmass_empty', gpu=True, seed=0, **kwargs):
 
@@ -18,7 +18,7 @@ def run(output_dir='/tmp', env_name='pointmass_empty', gpu=True, seed=0, **kwarg
     # Algo
     from gcsl.algo import buffer, gcsl, variants, networks
 
-    ptu.set_gpu(gpu)
+    ptu.set_gpu(0)
     if not gpu:
         print('Not using GPU. Will be slow.')
 
@@ -26,6 +26,7 @@ def run(output_dir='/tmp', env_name='pointmass_empty', gpu=True, seed=0, **kwarg
     np.random.seed(seed)
 
     env = envs.create_env(env_name)
+    # env.render()
     env_params = envs.get_env_params(env_name)
     print(env_params)
 
@@ -45,8 +46,10 @@ def run(output_dir='/tmp', env_name='pointmass_empty', gpu=True, seed=0, **kwarg
 
 if __name__ == "__main__":
     params = {
-        'seed': [0],
-        'env_name': ['pointmass_empty'], #['lunar', 'pointmass_empty','pointmass_rooms', 'pusher', 'claw', 'door'],
-        'gpu': [True],
+        'seed': 0,
+        'env_name': 'pointmass_rooms', #['lunar', 'pointmass_empty','pointmass_rooms', 'pusher', 'claw', 'door'],
+        'gpu': True,
+        'output_dir': './results4/gcsl_hitl'
     }
-    dd_utils.launch(run, params, mode='local', instance_type='c4.xlarge')
+    run(**params)
+    # dd_utils.launch(run, params, mode='local', instance_type='c4.xlarge')

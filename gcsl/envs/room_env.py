@@ -29,7 +29,10 @@ class PointmassGoalEnv(GymGoalEnvWrapper):
         )
 
         if fixed_start:
-            config['start_config'] = (np.array([-0.33,-0.33]), np.array([-0.27,-0.27])) # Start at / around (-0.3, -0.3)
+            config['start_config'] = np.array([-0.55, -0.55])
+
+        if room_type == 'rooms':
+            config['goal_config'] = 'top_right_corner' #np.array([-0.33, 0.33]) #'all' #(np.array([0.27,0.27]), np.array([0.33,0.33])) # End at / around (0.3, 0.3)
 
         if fixed_goal:
             config['goal_config'] = (np.array([0.27,0.27]), np.array([0.33,0.33])) # End at / around (0.3, 0.3)

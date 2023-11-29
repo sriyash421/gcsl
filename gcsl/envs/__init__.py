@@ -15,8 +15,8 @@ except:
 from gcsl.envs.room_env import PointmassGoalEnv
 from gcsl.envs.sawyer_push import SawyerPushGoalEnv
 from gcsl.envs.sawyer_door import SawyerDoorGoalEnv
-from gcsl.envs.lunarlander import LunarEnv
-from gcsl.envs.claw_env import ClawEnv
+# from gcsl.envs.lunarlander import LunarEnv
+# from gcsl.envs.claw_env import ClawEnv
 
 env_names = ['pointmass_rooms', 'pointmass_empty', 'pusher', 'lunar', 'door', 'claw']
 

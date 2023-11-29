@@ -16,6 +16,15 @@ except:
     print('Tensorboard not installed!')
     tensorboard_enabled = False
 
+from gcsl.algo.human import HumanExpert
+
+import keyboard
+USE_HUMAN = False
+
+def update_mode():
+    global USE_HUMAN
+    USE_HUMAN = not USE_HUMAN
+
 class GCSL:
     """Goal-conditioned Supervised Learning (GCSL).
 
@@ -65,7 +74,7 @@ class GCSL:
         replay_buffer,
         validation_buffer=None,
         max_timesteps=1e6,
-        max_path_length=50,
+        max_path_length=500,
         # Exploration Strategy
         explore_timesteps=1e4,
         expl_noise=0.1,
@@ -74,7 +83,7 @@ class GCSL:
         eval_freq=5e3,
         eval_episodes=200,
         save_every_iteration=False,
-        log_tensorboard=False,
+        log_tensorboard=True,
         # Policy Optimization Parameters
         start_policy_timesteps=0,
         batch_size=100,
@@ -117,6 +126,8 @@ class GCSL:
         self.log_tensorboard = log_tensorboard and tensorboard_enabled
         self.summary_writer = None
 
+        self.human_expert = HumanExpert()
+        keyboard.add_hotkey('h', update_mode)
 
     def loss_fn(self, observations, goals, actions, horizons, weights):
         obs_dtype = torch.float32
@@ -133,8 +144,8 @@ class GCSL:
 
         return torch.mean(nll * weights_torch)
     
-    def sample_trajectory(self, greedy=False, noise=0, render=False):
-
+    def sample_trajectory(self, greedy=False, noise=0, render=True, total_timesteps=0, evaluate=False):
+        global USE_HUMAN
         goal_state = self.env.sample_goal()
         goal = self.env.extract_goal(goal_state)
 
@@ -143,17 +154,33 @@ class GCSL:
 
         state = self.env.reset()
         for t in range(self.max_path_length):
-            if render:
-                self.env.render()
+            if render and USE_HUMAN:
+                self.env.render(mode='human')
+                time.sleep(0.05)
 
             states.append(state)
 
             observation = self.env.observation(state)
             horizon = np.arange(self.max_path_length) >= (self.max_path_length - 1 - t) # Temperature encoding of horizon
-            action = self.policy.act_vectorized(observation[None], goal[None], horizon=horizon[None], greedy=greedy, noise=noise)[0]
-            
+            policy_action = self.policy.act_vectorized(observation[None], goal[None], horizon=horizon[None], greedy=greedy, noise=noise)[0]
             if not self.is_discrete_action:
-                action = np.clip(action, self.env.action_space.low, self.env.action_space.high)
+                policy_action = np.clip(policy_action, self.env.action_space.low, self.env.action_space.high)
+
+            if USE_HUMAN and not evaluate:
+                action = self.human_expert.get_action(policy_action)
+            else:
+                action = policy_action
+
+            if not evaluate:
+                # logger.record_tabular('Action / Policy ', policy_action)
+                # logger.record_tabular('Action / Actual ', action)
+                # logger.record_tabular('Action / Human ', action * float(USE_HUMAN))
+                # logger.record_tabular('Human Intervention ', USE_HUMAN)
+                if self.summary_writer:
+                    self.summary_writer.add_scalar('Action / Policy ', policy_action, total_timesteps + t)
+                    self.summary_writer.add_scalar('Action / Actual ', action, total_timesteps + t)
+                    self.summary_writer.add_scalar('Action / Human ', action * float(USE_HUMAN), total_timesteps + t)
+                    self.summary_writer.add_scalar('Human Intervention ', USE_HUMAN, total_timesteps + t)
             
             actions.append(action)
             state, _, _, _ = self.env.step(action)
@@ -247,9 +274,9 @@ class GCSL:
 
                 # Interact in environmenta according to exploration strategy.
                 if total_timesteps < self.explore_timesteps:
-                    states, actions, goal_state = self.sample_trajectory(noise=1)
+                    states, actions, goal_state = self.sample_trajectory(noise=1, total_timesteps=total_timesteps)
                 else:
-                    states, actions, goal_state = self.sample_trajectory(greedy=True, noise=self.expl_noise)
+                    states, actions, goal_state = self.sample_trajectory(greedy=True, noise=self.expl_noise, total_timesteps=total_timesteps)
 
                 # With some probability, put this new trajectory into the validation buffer
                 if self.validation_buffer is not None and np.random.rand() < 0.2:
@@ -328,7 +355,7 @@ class GCSL:
         success_vec = np.zeros(eval_episodes)
 
         for index in tqdm.trange(eval_episodes, leave=True):
-            states, actions, goal_state = self.sample_trajectory(noise=0, greedy=greedy)
+            states, actions, goal_state = self.sample_trajectory(noise=0, greedy=greedy, total_timesteps=total_timesteps, render=False, evaluate=True)
             all_actions.extend(actions)
             all_states.append(states)
             all_goal_states.append(goal_state)

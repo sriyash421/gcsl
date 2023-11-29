@@ -63,7 +63,7 @@ class DiscretizedActionEnv(ProxyEnv):
             actions_meshed = np.meshgrid(*[np.linspace(lo, hi, granularity) for lo, hi in zip(self.wrapped_env.action_space.low, self.wrapped_env.action_space.high)])
             self.base_actions = np.array([a.flat[:] for a in actions_meshed]).T
             n_dims = self.wrapped_env.action_space.shape[0]
-        
+        # print(self.base_actions)
         self.action_space = Discretized(len(self.base_actions), n_dims, granularity)
 
     def step(self, action):

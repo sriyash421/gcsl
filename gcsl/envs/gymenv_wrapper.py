@@ -2,7 +2,7 @@ import numpy as np
 from gcsl.envs import goal_env
 import gym
 
-class GymGoalEnvWrapper(goal_env.GoalEnv):
+class GymGoalEnvWrapper(gym.Env):
     
     """
     
@@ -11,7 +11,6 @@ class GymGoalEnvWrapper(goal_env.GoalEnv):
     """
     
     def __init__(self, base_env, observation_key='observation', goal_key='achieved_goal', state_goal_key='achieved_goal', use_internal_rewards=False):
-        super(GymGoalEnvWrapper, self).__init__()
         self.base_env = base_env
 
         self.action_space = self.base_env.action_space
@@ -43,6 +42,7 @@ class GymGoalEnvWrapper(goal_env.GoalEnv):
         self.sgoal_dims = sgoal_low.shape[0]
 
         self.use_internal_rewards = use_internal_rewards
+        super(GymGoalEnvWrapper, self).__init__()
 
     def _base_obs_to_state(self, base_obs):
         obs = base_obs[self.obs_key].flatten()
@@ -60,8 +60,8 @@ class GymGoalEnvWrapper(goal_env.GoalEnv):
         base_obs = self.base_env.reset()
         return self._base_obs_to_state(base_obs)
 
-    def render(self):
-        return self.base_env.render()
+    def render(self, mode='human'):
+        return self.base_env.render(mode=mode)
         
     def step(self, a):
         """
